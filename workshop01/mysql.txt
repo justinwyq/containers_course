@@ -1,0 +1,23 @@
+# bind mount
+# must specify absolute path to a path on host
+docker run -d -p 3306:3306 --name mysql \
+  -e MYSQL_ROOT_PASSWORD=abc123 \
+  --mount type=bind,src=/Users/justin/Documents/containers_course/workshop01/dbdir,dst=/var/lib/mysql \
+  mysql:8.3
+
+# volume mount:
+# docker volume create myvol
+docker run -d -p 3306:3306 --name mysql \
+  -e MYSQL_ROOT_PASSWORD=abc123 \
+  --mount type=volume,src=myvol,dst=/var/lib/mysql \
+  mysql:8.3
+
+
+docker run -d -p 8083:3000 --name fortune  --network mynet justinwongdsaid/fortune:1.0.0
+
+# container networking troubleshooting: nicolaka/netshoot
+# ti: interactive
+# rm: after container stops, delete it immediately
+docker run -ti --rm \
+  --network mynet \
+  nicolaka/netshoot:v0.12 /bin/bash

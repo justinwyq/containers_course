@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: bggapp-cm
+  namespace: bggns
+data:
+  BGG_DB_USER: root
+  BGG_DB_HOST: bggdb-svc.bggns.svc.cluster.local
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bggapp-secret
+  namespace: bggns
+type: Opaque
+data:
+  BGG_DB_PASSWORD: Y2hhbmdlaXQ=
+# k apply -f config.yaml
+# k get cm,secret -nmyns
+# k describe cm/dov-cm -nmyns
+# k describe secret/dov-secret -nmyns
+
+# if accidentally deleted config yaml, can get back by:
+# k get secret/dov-secret -nmyns -o yaml > config.yaml

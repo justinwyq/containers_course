@@ -1,0 +1,90 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bggdb-deploy
+  namespace: bggns
+  labels:
+    app: bggapp
+    type: deploy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: bggapp
+      name: be
+  template:
+    metadata:
+      name: bggdb-svc
+      namespace: bggns
+      labels:
+        app: bggapp
+        type: be
+    spec:
+      containers:
+        - name: bggdb-be-container
+          image: stackupiss/bgg-backend:v1
+          imagePullPolicy: IfNotPresent # Always, IfNotPresent, Never
+          env:
+            - name: BGG_PORT
+              value: bgapp-be-port
+          envFrom:
+            - configMapRef:
+                name: bggapp-cm
+            - secretRef:
+                name: bggapp-secret
+          ports:
+            - name: bgapp-be-port
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: bgapp-be-port
+            periodSeconds: 30
+            initialDelaySeconds: 5 #ie 35 seconds for the first probe
+# to create deployment: k apply -f dov-deploy.yml
+# to show deployment: k get deploy,po -nbggns
+# to show pods in deployment: k get deploy -nbggns
+# to show all: k get all -nbggns
+# show more info of all: k get all -nbggns -owide
+
+# delete deployment: k delete deployment.apps/dov-deploy -nbggns
+
+# in order to manage the number of replicas, kubernetes will create a replicaset (eg like autoscaling group)
+
+# forward port: k port-forward -nbggns deploy/dov-deploy 8080:3000
+
+# to scale deployment: k scale deploy/dov-deploy -nbggns --replicas=3
+--- # to specify multiple yaml files in a single file
+apiVersion: v1 # if core no need to write core/v1, eg just v1
+kind: Service
+metadata:
+  name: dov-svc
+  namespace: bggns
+  labels:
+    app: dov
+    name: dov-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: dov
+    name: dov-po
+  ports:
+    - name: svc-web-port
+      port: 5000
+      targetPort: web-port
+    - name: svc-metrics-port
+      port: 5100
+      targetPort: metrics-port
+# 3 types of services:
+# cluster Ip
+# node pod
+# load balancer
+
+# when create a service, kubernetes will take the service and put it in dns
+# so can reference the service by name from any namespace: <service_name>.<namespace>.svc.cluster.local
+# in this case: dov-svc.bggns.svc.cluster.local
+
+# forwarding: k port-forward -nbggns svc/dov-svc 8080:5000 # 8080 is local port, 5000 is service port
+# note: can also use the named ports (svc-web-port, svc-metrics-port) instead of the numbers

@@ -1,0 +1,28 @@
+# Check kubernetes cluster info
+kubectl cluster-info
+
+on mac can do hard link: 
+sudo ln -s /opt/homebrew/bin/kubectl k ??? doesn't work
+alias k="/opt/homebrew/bin/kubectl"
+
+
+To monitor the cluster: 
+* octant: runs outside of the cluster, can save resources. depends on the permissions of the kubeconfig file
+* kubecolor: runs inside the cluster
+
+
+kubernetes shorthands:
+po = pods
+ns = namespace
+k describe po/cilium-s8lz4 -nkube-system = k describe pods cilium-s8lz4 -n kube-system
+
+kube-system: where most of the control plane components runs
+any ns with -system at end: for managing control plane components
+default: should not use this
+kube-public: visible to all users, shouldn't use
+
+
+
+
+multiple yaml files in 1:
+start the file with three dashes: ---

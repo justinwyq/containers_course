@@ -1,0 +1,51 @@
+--- # to specify multiple yaml files in a single file
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bggdb-deploy
+  namespace: bggns
+  labels:
+    app: bggapp
+    type: deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bggapp
+      name: bggdb-db
+      type: db
+  template:
+    metadata:
+      name: bggdb-db
+      namespace: bggns
+      labels:
+        app: bggapp
+        name: bggdb-db
+        type: db
+    spec:
+      containers:
+        - name: bggdb-db-container
+          image: stackupiss/bgg-database:v1
+          imagePullPolicy: IfNotPresent # Always, IfNotPresent, Never
+          ports:
+            - name: bgapp-db-port
+              containerPort: 3306
+              protocol: TCP
+---
+apiVersion: v1 # if core no need to write core/v1, eg just v1
+kind: Service
+metadata:
+  name: bggdb-svc
+  namespace: bggns
+  labels:
+    app: bggapp
+    type: bggdb-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: bggapp
+    type: db
+  ports:
+    - name: bgapp-svc-db-port
+      port: 3306
+      targetPort: bgapp-db-port

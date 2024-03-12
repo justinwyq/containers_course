@@ -1,0 +1,63 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bggapp-deploy
+  namespace: bggns
+  labels:
+    app: bggapp
+    type: deploy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: bggapp
+      type: be
+  template:
+    metadata:
+      name: bggapp-svc
+      namespace: bggns
+      labels:
+        app: bggapp
+        type: be
+    spec:
+      containers:
+        - name: bggdb-be-container
+          image: stackupiss/bgg-backend:v1
+          imagePullPolicy: IfNotPresent # Always, IfNotPresent, Never
+          envFrom:
+            - configMapRef:
+                name: bggapp-cm
+            - secretRef:
+                name: bggapp-secret
+          ports:
+            - name: bgapp-be-port
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: bgapp-be-port
+            periodSeconds: 30
+            initialDelaySeconds: 5 #ie 35 seconds for the first probe
+---
+apiVersion: v1 # if core no need to write core/v1, eg just v1
+kind: Service
+metadata:
+  name: bggapp-svc
+  namespace: bggns
+  labels:
+    app: bggapp
+    type: bggapp-svc
+spec:
+  type: ClusterIP
+  # type: NodePort
+  # type: LoadBalancer
+  selector:
+    app: bggapp
+    type: be
+  ports:
+    - name: bgapp-svc-be-port
+      port: 80
+      targetPort: bgapp-be-port
+#  k get svc -A : will list all services in all namespaces

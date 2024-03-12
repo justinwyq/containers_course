@@ -1,0 +1,48 @@
+--- # to specify multiple yaml files in a single file
+apiVersion: v1 # if core no need to write core/v1, eg just v1
+kind: Pod # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#pod-v1-core
+metadata:
+  name: dov-po
+  namespace: myns # pod is namespace bound. if not specified then it goes into default
+  labels: # good to have labels for everything
+    app: dov
+    env: test
+spec:
+  containers:
+    - name: dov-container
+      image: chukmunnlee/dov-bear:v5
+      imagePullPolicy: IfNotPresent # Always, IfNotPresent, Never
+      env:
+        - name: INSTANCE_NAME
+          value: dov-pod
+        - name: INSTANCE_HASH
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app']
+      ports:
+        - name: web-port
+          containerPort: 3000
+          protocol: TCP
+        - name: metrics-port
+          containerPort: 3100
+          protocol: TCP
+      livenessProbe:
+        httpGet:
+          path: /healthz
+          port: web-port
+        periodSeconds: 30
+        initialDelaySeconds: 5 #ie 35 seconds for the first probe
+# to create: k create -f dov-bear.yaml
+# to describe: k describe po/dov-po -nmyns
+# to get logs: k logs po/dov-po -nmyns
+# to delete: k delete -f dov-bear.yaml
+# to force delete immediately: k delete -f dov-bear.yaml --force --grace-period=0
+# to force delete immediately (short form): k delete -f dov-bear.yaml $now
+# now=$(echo --force --grace-period=0)
+# to force delete immediately (short form): now="--force --grace-period=0"
+
+# Create: imperative
+# Apply: compares existing with what is in the file and updates only if there are changes
+
+# tunnel: k port-forward -nmyns po/dov-po 3000:3000
+# can also do interactive shell. must exec into pods: k exec -ti -nmyns po/dov-po -- /bin/sh

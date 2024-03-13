@@ -3,6 +3,7 @@ kubectl cluster-info
 
 on mac can do hard link: 
 sudo ln -s /opt/homebrew/bin/kubectl k ??? doesn't work
+sudo ln -s /opt/homebrew/bin/kubectl /usr/local/bin/k  # guess need to specify the full path
 alias k="/opt/homebrew/bin/kubectl"
 
 
@@ -26,3 +27,12 @@ kube-public: visible to all users, shouldn't use
 
 multiple yaml files in 1:
 start the file with three dashes: ---
+
+k top no # list the processes running in node. but need metrics API server to be installed. github.com/kubernetes-sigs/metrics-server
+k top po # list the processes running in pod
+
+eg:
+k top po -A --sort-by=memory  # show all metrics of all pods sorted by memory
+
+metrics-server only provides rudimentary metrics 
+kube-state-metrics gives more metrics. typically used together with prometheus

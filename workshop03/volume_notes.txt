@@ -1,0 +1,13 @@
+Doing a hostPath for volumes is a bad idea. It can fill up the host storage causing that node to crash.
+
+To view storageclasses:
+k get storageclass
+or `k get sc`
+
+PersistentVolumeClaim  (PVC) is namespace-scoped. Persistentvolume is not namespace-scoped
+
+Can also get documentation via `k explain po.spec.volumes`
+k explain po.spec.volumes.persistentVolumeClaim
+
+# if storage class is retain, it's possible to create a new deployment to re-attach to the retained volume. however this must be done statically.
+# used to have a 'recycle' storageclass but that has been deprecated.

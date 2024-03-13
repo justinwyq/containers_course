@@ -1,0 +1,96 @@
+--- # add ingress to the deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dov-deploy
+  namespace: myns
+  labels:
+    app: dov
+    name: dov-po
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: dov
+      name: dov-po
+  template:
+    metadata:
+      name: dov-po
+      # namespace: myns # no need namespace because it's understood
+      labels: # good to have labels for everything
+        app: dov
+        name: dov-po
+    spec:
+      containers:
+        - name: dov-container
+          image: chukmunnlee/dov-bear:v5
+          imagePullPolicy: IfNotPresent # Always, IfNotPresent, Never
+          env:
+            - name: INSTANCE_HASH
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          envFrom:
+            # - configMapRef: # for secrets, use secretRef
+            #     name: dov-cm
+            - secretRef: # for secrets, use secretRef
+                name: dov-secret
+          ports:
+            - name: web-port
+              containerPort: 3000
+            - name: metrics-port
+              containerPort: 3100
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: web-port
+            periodSeconds: 30
+            initialDelaySeconds: 5 #ie 35 seconds for the first probe
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dov-svc
+  namespace: myns
+  labels:
+    app: dov
+    name: dov-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: dov
+    name: dov-po
+  ports:
+    - name: svc-web-port
+      port: 5000
+      targetPort: web-port
+    - name: svc-metrics-port
+      port: 5100
+      targetPort: metrics-port
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dov-ing
+  namespace: myns
+  labels:
+    app: dov
+    name: dov-ing
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: dov-146.190.195.90.nip.io # use nip.io for testing
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dov-svc
+                port:
+                  name: svc-web-port # can give either name or number
+                  # number: 5000
+  # tls:
+  #   - hosts:
+  #       - dov.bgg.com
+  #     secretName: dov-tls

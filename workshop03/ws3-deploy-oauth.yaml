@@ -1,0 +1,78 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth-deploy
+  namespace: codeserverns
+  labels:
+    app: codeserver
+    name: oauth-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: codeserver
+      name: oauth-po
+  template:
+    metadata:
+      name: oauth-svc
+      namespace: codeserverns
+      labels:
+        app: codeserver
+        name: oauth-po
+    spec:
+      containers:
+        - name: oauth-container
+          image: bitnami/oauth2-proxy:7.2.1
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: oauth-cm
+            - secretRef:
+                name: oauth-secret
+          ports:
+            - name: oauth-port
+              containerPort: 4180
+---
+apiVersion: v1 # if core no need to write core/v1, eg just v1
+kind: Service
+metadata:
+  name: oauth-svc
+  namespace: codeserverns
+  labels:
+    app: codeserver
+    name: oauth-svc
+spec:
+  type: ClusterIP
+  # type: NodePort
+  # type: LoadBalancer
+  selector:
+    app: codeserver
+    name: oauth-po
+  ports:
+    - name: bgapp-svc-be-port
+      port: 5180
+      targetPort: oauth-port
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: oauth-ingress
+  namespace: codeserverns
+  labels:
+    app: codeserver
+    name: oauth-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: codeserver-146.190.195.90.nip.io
+      http:
+        paths:
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: oauth-svc
+                port:
+                  number: 5180

@@ -1,0 +1,18 @@
+Install helm: https://artifacthub.io/packages/helm/ingress-nginx/ingress-nginx
+
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+# Installing a chart:
+helm install ingress-nginx ingress-nginx/ingress-nginx -ningress-nginx --create-namespace
+# -create-namespace flag automatically adds the namespace
+
+# Watching the status:
+watch k get all -ningress-nginx
+
+# Searching for a chart:
+helm search hub nfs # searches the hub
+helm search repo nfs # searches the local repos that were previously added with `helm repo add`
+
+# List all helm installed charts:
+helm ls -A

@@ -1,0 +1,27 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oauth-cm
+  namespace: codeserverns
+data:
+  OAUTH2_PROXY_PROVIDER: github
+  OAUTH2_PROXY_EMAIL_DOMAINS: "*"
+  OAUTH2_PROXY_UPSTREAM: file:///dev/null
+  OAUTH2_PROXY_HTTP_ADDRESS: 0.0.0.0:4180
+  OAUTH2_PROXY_REDIRECT_URL: http://codeserver-146.190.195.90.nip.io/oauth2/callback
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oauth-secret
+  namespace: codeserverns
+type: Opaque
+data:
+  OAUTH2_PROXY_COOKIE_SECRET: S1UzU1ZJdkQ1eWhYcUExekRFbXJDMm40SF9PcjAxeFQydkpnVDRFU3BhUT0= # KU3SVIvD5yhXqA1zDEmrC2n4H_Or01xT2vJgT4ESpaQ=
+  OAUTH2_PROXY_COOKIE_SECURE: ZmFsc2U= # false
+  OAUTH2_PROXY_CLIENT_ID: MWRkMmRjNDAyNjc3YmRmYzRmYzM= # 1dd2dc402677bdfc4fc3
+  OAUTH2_PROXY_CLIENT_SECRET: OGRhNzZjYjg1ODA4ZTI1ZDJhMjI4MzFhOWIwMmY4MzYxYTBmMGY3NQ== # 8da76cb85808e25d2a22831a9b02f8361a0f0f75
+
+# callback: http://codeserver-146.190.195.90.nip.io/oauth2/callback

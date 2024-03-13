@@ -3,8 +3,8 @@ k apply -f ws2-config.yaml
 k apply -f ws2-db.yaml  // to check, k describe -nbggns svc/bggdb-svc; then verify that endpoint is pointing to a target instead of <none>
                         // can also check endpoint directly: k get -nbggns ep/bggdb-svc
 k apply -f ws2-deploy.yaml
-k port-forward -nbggns deploy/bggdb-deploy 8080:8080
+k port-forward -nbggns service/bggapp-svc 8080:8080
 
 troubleshooting: k logs -f -nbggns deploy/bggdb-deploy
 
-logs: k lo
+logs: k logs 

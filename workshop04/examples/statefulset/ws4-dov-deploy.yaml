@@ -1,0 +1,74 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dov-sts
+  namespace: myns
+spec:
+  replicas: 3
+  serviceName: dov-hsvc
+  selector:
+    matchLabels:
+      app: dov
+      name: dov-po
+  template:
+    metadata:
+      name: dov-po
+      # namespace: myns # no need namespace because it's understood
+      labels: # good to have labels for everything
+        app: dov
+        name: dov-po
+    spec:
+      containers:
+        - name: dov-container
+          image: chukmunnlee/dov-bear:v5
+          imagePullPolicy: IfNotPresent # Always, IfNotPresent, Never
+          env:
+            - name: INSTANCE_HASH
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          # envFrom:
+          #   # - configMapRef: # for secrets, use secretRef
+          #   #     name: dov-cm
+          #   - secretRef: # for secrets, use secretRef
+          #       name: dov-secret
+          ports:
+            - name: web-port
+              containerPort: 3000
+            - name: metrics-port
+              containerPort: 3100
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: web-port
+            periodSeconds: 30
+            initialDelaySeconds: 5 #ie 35 seconds for the first probe
+          resources:
+            requests:
+              cpu: 32m
+              memory: 64Mi
+            limits:
+              cpu: 32m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dov-hsvc
+  namespace: myns
+  labels:
+    app: dov
+    name: dov-hsvc
+spec:
+  clusterIP: None
+  selector:
+    app: dov
+    name: dov-po
+  ports:
+    - name: svc-web-port
+      port: 5000
+      targetPort: web-port
+    - name: svc-metrics-port
+      port: 5100
+      targetPort: metrics-port

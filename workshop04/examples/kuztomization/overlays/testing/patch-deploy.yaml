@@ -1,0 +1,46 @@
+- op: "add"
+  path: /spec/template/spec
+  value: |
+    { "volumes": [
+       {"name": "dov-vol", "emptyDir": {}}
+     ]}
+
+- op: "add"
+  path: /spec/template/spec/containers/0
+  value: |
+    {"volumeMounts": [{"name": "dov-vol", "mountPath": "/opt/tmp"}]}
+
+
+
+      # volumes:
+      #   - name: cm-vol
+      #     configMap:
+      #       name: bgg-cm-data
+      #   - name: data-vol
+      #     persistentVolumeClaim:
+      #       claimName: bgg-pvc
+      # containers:
+      #   - name: bggdb-be-container
+      #     image: stackupiss/bgg-backend:v2
+      #     imagePullPolicy: IfNotPresent # Always, IfNotPresent, Never
+      #     envFrom:
+      #       - configMapRef:
+      #           name: bggapp-cm
+      #       - secretRef:
+      #           name: bggapp-secret
+      #     ports:
+      #       - name: bgapp-be-port
+      #         containerPort: 3000
+      #         protocol: TCP
+      #     livenessProbe:
+      #       httpGet:
+      #         path: /healthz
+      #         port: bgapp-be-port
+      #       periodSeconds: 30
+      #       initialDelaySeconds: 5 #ie 35 seconds for the first probe
+      #     volumeMounts:
+      #       - name: cm-vol
+      #         mountPath: /opt/tmp
+      #         readOnly: true
+      #       - name: data-vol
+      #         mountPath: /var/lib/mysql

@@ -36,3 +36,24 @@ k top po -A --sort-by=memory  # show all metrics of all pods sorted by memory
 
 metrics-server only provides rudimentary metrics 
 kube-state-metrics gives more metrics. typically used together with prometheus
+
+
+
+Resource limits on pods: can set a requested cpu/ram and a limit for cpu/ram
+If request and limit are the same, it becomes a Guaranteed type
+If not the same: Burstable (medium priority)
+If not specified: Best Effort (lowest priority, killed the first)
+
+LimitRange can help to set a default limit on all of the resources
+
+
+
+Headless service:
+Specify a clusterIP service with clusterIP=None
+The service gives a list of the IP addresses of all the pods. It's up to the client to connect to the pod that he wants
+
+In contrast, a normal cluster IP service provides 1 cluster IP address for the client to connect to, that helps to load balance between the pods
+
+
+Stateful applications: created via StatefulSet
+when creating statefulset, must always attach a headless service

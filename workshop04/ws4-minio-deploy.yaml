@@ -1,0 +1,188 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: minio-sts
+  namespace: minio
+spec:
+  replicas: 4
+  serviceName: minio-hsvc
+  selector:
+    matchLabels:
+      app: minio
+      name: minio-po
+  template:
+    metadata:
+      name: minio-po
+      # namespace: minio # no need namespace because it's understood
+      labels: # good to have labels for everything
+        app: minio
+        name: minio-po
+    spec:
+      # initContainers:
+      #   - name: minio-init
+      #     image: busybox
+      #     imagePullPolicy: IfNotPresent
+      #     command:
+      #       - /bin/sh
+      #       - -c
+      #       - "chown -R 1001:1001 /data"
+      #     volumeMounts:
+      #       - name: data-vol
+      #         mountPath: /data
+      #         readOnly: false
+      securityContext:
+        fsGroup: 1001
+      containers:
+        - name: minio-container
+          image: bitnami/minio:2024.3.10
+          # command:
+          #   - /bin/sh
+          #   - -c
+          #   - "chown -R 1001:1001 /data"
+          # command:
+          #   - chown
+          #   - -R
+          #   - 1001:1001
+          #   - /data
+          # command:
+          #   - firewall-cmd
+          #   - --permanent
+          #   - --zone=public
+          #   - --add-port=9000/tcp
+          command: # writing it like this in array is the exec form
+            - minio
+            - server
+            - --address=:9000
+            - --console-address=:9090
+            - http://minio-sts-{0...3}.minio-hsvc.minio.svc.cluster.local/data
+          # command:  # This is the shell form
+          #   - /bin/sh
+          #   - -c
+          #   - "minio server --address=:..."
+          imagePullPolicy: IfNotPresent # Always, IfNotPresent, Never
+          env:
+            - name: MINIO_ROOT_USER
+              value: user
+            - name: MINIO_ROOT_PASSWORD
+              value: password
+            - name: MINIO_CI_CD
+              value: "1"
+              # valueFrom:
+              #   fieldRef:
+              #     fieldPath: status.podIP
+          # envFrom:
+          #   # - configMapRef: # for secrets, use secretRef
+          #   #     name: minio-cm
+          #   - secretRef: # for secrets, use secretRef
+          #       name: minio-secret
+          ports:
+            - name: port
+              containerPort: 9000
+            - name: health-port
+              containerPort: 900
+            - name: console-port
+              containerPort: 9090
+          volumeMounts:
+            - name: data-vol
+              mountPath: /data
+              readOnly: false
+          # livenessProbe:
+          #   httpGet:
+          #     path: /minio/health/live
+          #     port: port
+          #   periodSeconds: 30
+          #   initialDelaySeconds: 5 #ie 35 seconds for the first probe
+          # readinessProbe:
+          #   httpGet:
+          #     path: /minio/health/ready
+          #     port: port
+          #   periodSeconds: 30
+          #   initialDelaySeconds: 5 #ie 35 seconds for the first probe
+          resources:
+            requests:
+              cpu: 200m
+              memory: 250Mi
+            limits:
+              cpu: 200m
+              memory: 250Mi
+  volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: data-vol
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+        storageClassName: do-block-storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-hsvc
+  namespace: minio
+  labels:
+    app: minio
+    name: minio-hsvc
+spec:
+  clusterIP: None
+  selector:
+    app: minio
+    name: minio-po
+  ports:
+    - name: svc-web-port
+      port: 9000
+      targetPort: port
+    - name: svc-metrics-port
+      port: 9090
+      targetPort: console-port
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minio-ingress-data
+  namespace: minio
+  labels:
+    app: codeserver
+    name: minio-ingress-data
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "http://$host/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "http://$host/oauth2/start?rd=$escaped_request_uri"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: data-146.190.195.90.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio-hsvc
+                port:
+                  number: 9000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: minio-ingress-console
+  namespace: minio
+  labels:
+    app: codeserver
+    name: minio-ingress-console
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: console-146.190.195.90.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: minio-hsvc
+                port:
+                  number: 9090

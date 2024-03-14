@@ -1,0 +1,197 @@
+--- # add a configmap and a pvc to the deployment
+# for pvc, create persistentvolumeclaim, add volume to the deployment, and mount the volume to the container
+apiVersion: v1
+kind: ConfigMap # just creates some temporary files in the filesystem
+metadata:
+  name: bgg-cm-data
+  namespace: bggns
+  labels:
+    app: bggapp
+    name: bgg-cm-data
+data:
+  test.txt: |
+    testtest123
+    heloooo
+    elhe
+  readme.txt: this is a readme file
+---
+apiVersion: v1
+kind: PersistentVolumeClaim # pvc is namespace-scoped. persistentvolume is not namespace-scoped
+metadata:
+  name: bgg-pvc
+  namespace: bggns
+  labels:
+    app: bggapp
+    name: bgg-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: do-block-storage-retain # get storage classes by k get sc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bggapp-deploy
+  namespace: bggns
+  labels:
+    app: bggapp
+    type: deploy
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: bggapp
+      type: be
+  template:
+    metadata:
+      name: bggapp-svc
+      namespace: bggns
+      labels:
+        app: bggapp
+        type: be
+    spec:
+      volumes:
+        - apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: data-vol
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+      containers:
+        - name: bggdb-be-container
+          image: stackupiss/bgg-backend:v2
+          imagePullPolicy: IfNotPresent # Always, IfNotPresent, Never
+          envFrom:
+            - configMapRef:
+                name: bggapp-cm
+            - secretRef:
+                name: bggapp-secret
+          ports:
+            - name: bgapp-be-port
+              containerPort: 3000
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: bgapp-be-port
+            periodSeconds: 30
+            initialDelaySeconds: 5 #ie 35 seconds for the first probe
+          volumeMounts:
+            - name: cm-vol
+              mountPath: /opt/tmp
+              readOnly: true
+            - name: data-vol
+              mountPath: /var/lib/mysql
+---
+apiVersion: v1 # if core no need to write core/v1, eg just v1
+kind: Service
+metadata:
+  name: bggapp-svc
+  namespace: bggns
+  labels:
+    app: bggapp
+    type: bggapp-svc
+spec:
+  type: ClusterIP
+  # type: NodePort
+  # type: LoadBalancer
+  selector:
+    app: bggapp
+    type: be
+  ports:
+    - name: bgapp-svc-be-port
+      port: 5000
+      targetPort: bgapp-be-port
+#  k get svc -A : will list all services in all namespaces
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bggapp-ingress
+  namespace: bggns
+  labels:
+    app: bggapp
+    type: bggapp-ingress
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: bgg-146.190.195.90.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: bggapp-svc
+                port:
+                  number: 5000
+
+--- # to specify multiple yaml files in a single file
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bggdb-deploy
+  namespace: bggns
+  labels:
+    app: bggapp
+    type: deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bggapp
+      name: bggdb-db
+      type: db
+  template:
+    metadata:
+      name: bggdb-db
+      namespace: bggns
+      labels:
+        app: bggapp
+        name: bggdb-db
+        type: db
+    spec:
+      volumes:
+        - apiVersion: v1
+          kind: PersistentVolumeClaim
+          metadata:
+            name: data-vol
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
+      containers:
+        - name: bggdb-db-container
+          image: stackupiss/bgg-database:v1
+          imagePullPolicy: IfNotPresent # Always, IfNotPresent, Never
+          ports:
+            - name: bgapp-db-port
+              containerPort: 3306
+              protocol: TCP
+---
+apiVersion: v1 # if core no need to write core/v1, eg just v1
+kind: Service
+metadata:
+  name: bggdb-svc
+  namespace: bggns
+  labels:
+    app: bggapp
+    type: bggdb-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: bggapp
+    type: db
+  ports:
+    - name: bgapp-svc-db-port
+      port: 3306
+      targetPort: bgapp-db-port

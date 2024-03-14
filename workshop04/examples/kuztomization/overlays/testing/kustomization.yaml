@@ -1,0 +1,48 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+namespace: test-ns # replaces all occurrences of namespace with "test-ns"
+
+namePrefix: test- # replaces all occurrences of name with "test-<name>"
+
+replicas:
+  - name: dov-deploy
+    count: 1
+
+images:
+  - name: chunkmunnlee/dov-bear
+    newTag: v5
+
+configMapGenerator:
+  - name: dov-cm
+    namespace: myns
+    behavior: merge
+    literals:
+      - FOO=bar
+      - BAZ=qux
+
+patches:
+  - target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: dov-deploy
+      # namespace: myns
+    path: patch-deploy.yaml
+  # - target:
+  #     group: networking.k8s.io
+  #     version: v1
+  #     kind: Ingress
+  #     name: dov-ing
+  #   path: patch-ingress.yaml
+# to use:
+# k apply -k .
+
+# to dry run:
+# k apply -k . -oyaml --dry-run=client > testing.yaml
+
+# to delete:
+# k delete -k .

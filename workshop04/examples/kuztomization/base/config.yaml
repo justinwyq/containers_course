@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dov-cm
+  namespace: myns
+data:
+  INSTANCE_NAME: name from configmap
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dov-secret
+  namespace: myns
+type: Opaque
+data:
+  INSTANCE_NAME: bmFtZSBmcm9tIGNvbmZpZ21hcA==
+# k apply -f config.yaml
+# k get cm,secret -nmyns
+# k describe cm/dov-cm -nmyns
+# k describe secret/dov-secret -nmyns
+
+# if accidentally deleted config yaml, can get back by:
+# k get secret/dov-secret -nmyns -o yaml > config.yaml

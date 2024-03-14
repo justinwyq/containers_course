@@ -1,0 +1,111 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: codeserver-pvc
+  namespace: codeserverns
+  labels:
+    app: codeserver
+    name: codeserver-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: do-block-storage
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codeserver-deploy
+  namespace: codeserverns
+  labels:
+    app: codeserver
+    name: codeserver-deploy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: codeserver
+      name: codeserver-po
+  template:
+    metadata:
+      name: codeserver-svc
+      namespace: codeserverns
+      labels:
+        app: codeserver
+        name: codeserver-po
+    spec:
+      volumes:
+        - name: data-vol
+          persistentVolumeClaim:
+            claimName: codeserver-pvc
+      containers:
+        - name: codeserver-container
+          image: linuxserver/code-server:4.22.0 #lscr.io/linuxserver/codeserver:linux/amd64-4.22.0
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: codeserver-cm
+            - secretRef:
+                name: codeserver-secret
+          ports:
+            - name: codeserver-port
+              containerPort: 8443
+              # protocol: TCP
+          # livenessProbe:
+          #   httpGet:
+          #     path: /healthz
+          #     port: codeserver-port
+          #   periodSeconds: 30
+          #   initialDelaySeconds: 5 #ie 35 seconds for the first probe
+          volumeMounts:
+            - name: data-vol
+              mountPath: /config/workspace
+---
+apiVersion: v1 # if core no need to write core/v1, eg just v1
+kind: Service
+metadata:
+  name: codeserver-svc
+  namespace: codeserverns
+  labels:
+    app: codeserver
+    name: codeserver-svc
+spec:
+  type: ClusterIP
+  # type: NodePort
+  # type: LoadBalancer
+  selector:
+    app: codeserver
+    name: codeserver-po
+  ports:
+    - name: bgapp-svc-be-port
+      port: 5000
+      targetPort: codeserver-port
+#  k get svc -A : will list all services in all namespaces
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: codeserver-ingress
+  namespace: codeserverns
+  labels:
+    app: codeserver
+    name: codeserver-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/auth-url: "http://$host/oauth2/auth"
+    nginx.ingress.kubernetes.io/auth-signin: "http://$host/oauth2/start?rd=$escaped_request_uri"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: codeserver-146.190.195.90.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: codeserver-svc
+                port:
+                  number: 5000
